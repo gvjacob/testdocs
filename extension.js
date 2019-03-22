@@ -9,21 +9,24 @@ const {
 } = require('vscode');
 const { ExtensionContext } = require('vscode');
 
+const { Maybe, Just, Nothing } = require('monet');
+
 /**
  * @param {ExtensionContext} context
  */
 function activate(context) {
-  console.log(workspace.name, workspace.rootPath);
-
+  console.log('activated');
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
   let disposable = commands.registerCommand('extension.testdocs', function() {
     // Register the hover provider
     languages.registerHoverProvider('javascript', {
-      provideHover({ fileName }, { line, character }) {
-        const markdown = getMarkdown(fileName, line, character);
-        return new Hover(markdown);
+      async provideHover(document, position) {
+        const symbols = await getSymbolMetadata(document, position);
+        const indexUri = symbols[0].uri.path;
+        const testUri = await getTestUri(indexUri);
+        return new Hover('HERE');
       },
     });
   });
@@ -32,33 +35,37 @@ function activate(context) {
 }
 
 /**
- * Get the markdown test documentation from hovered
- * word in the given document.
- *
- * @param {string} fileName path to file with hover
- * @param {int} line line number
- * @param {int} character character number
- * @returns {string} markdown string
+ * Get symbol definition metadata.
+ * @param {TextDocument} document
+ * @param {Position} position
+ * @returns {[Location]}
  */
-function getMarkdown(fileName, line, character) {
-  // const hoveredModule = getHoveredModule(fileName, line, character);
-  // const moduleDirectory = getModuleDirectory(hoveredModule);
-  // const testFileName = getTestFileName(moduleDirectory);
-  // const { moduleName, testSuites } = getTestFileStructure(testFileName);
-  return new MarkdownString(
-    '### Module ### \n' + 'should return a string\n' + '\nshould only take in a string \n',
+async function getSymbolMetadata(document, position) {
+  const symbolMetadata = await commands.executeCommand(
+    'vscode.executeDefinitionProvider',
+    document.uri,
+    position,
   );
+  return symbolMetadata || [];
 }
 
 /**
- * Get the module of the hovered item in file.
- *
- * @param {string} fileName
- * @param {int} line
- * @param {int} character
- * @returns {string}
+ * Get the test file Uri given hovered symbol.
+ * @param {String} uri uri of hovered symbol
+ * @returns {Maybe} uri of test file
  */
-function getHoveredModule(fileName, line, character) {}
+async function getTestUri(uri) {
+  const uriSections = uri.split('/');
+  const withTest = uriSections.slice(0, uriSections.length - 1).concat('index.test.js');
+  const testUri = withTest.join('/');
+
+  workspace.openTextDocument(testUri);
+
+  const foundFiles = workspace.findFiles(testUri);
+  console.log(foundFiles);
+
+  return foundFiles;
+}
 
 // this method is called when your extension is deactivated
 function deactivate() {}
