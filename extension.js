@@ -16,6 +16,7 @@ const { Maybe, Just, Nothing } = require('monet');
  */
 function activate(context) {
   console.log('activated');
+
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
@@ -23,9 +24,10 @@ function activate(context) {
     // Register the hover provider
     languages.registerHoverProvider('javascript', {
       async provideHover(document, position) {
-        const symbols = await getSymbolMetadata(document, position);
-        const indexUri = symbols[0].uri.path;
-        const testUri = await getTestUri(indexUri);
+        const symbols = await getSymbolsMetadata(document, position);
+        const testUris = symbols.map((symbol) => getTestUri(symbol.uri.path));
+
+        console.log(testUris);
         return new Hover('HERE');
       },
     });
@@ -35,39 +37,67 @@ function activate(context) {
 }
 
 /**
+ * Get the test descriptions and cases from
+ * given text document.
+ * @param {TextDocument} doc
+ * @returns {TestStructure}
+ */
+async function getTestCases(doc) {
+  return {
+    moduleName: 1,
+  };
+}
+
+/**
+ * Open all the given documents and return the result
+ * of mapping on them with the mapper
+ *
+ * @param {[String]} filePaths
+ * @param {(TextDocument) -> T} docMapper
+ * @returns {[T]}
+ */
+async function openDocuments(filePaths, docMapper) {
+  const promises = uris.map(async (filePath) => {
+    const doc = await workspace.openTextDocument(filePath);
+    return docMapper(doc);
+  });
+
+  return await Promise.all(promises);
+}
+
+/**
  * Get symbol definition metadata.
  * @param {TextDocument} document
  * @param {Position} position
  * @returns {[Location]}
  */
-async function getSymbolMetadata(document, position) {
+async function getSymbolsMetadata(document, position) {
   const symbolMetadata = await commands.executeCommand(
     'vscode.executeDefinitionProvider',
     document.uri,
     position,
   );
+
   return symbolMetadata || [];
 }
 
 /**
  * Get the test file Uri given hovered symbol.
  * @param {String} uri uri of hovered symbol
- * @returns {Maybe} uri of test file
+ * @returns {String} uri of test file
  */
-async function getTestUri(uri) {
+function getTestUri(uri) {
   const uriSections = uri.split('/');
-  const withTest = uriSections.slice(0, uriSections.length - 1).concat('index.test.js');
-  const testUri = withTest.join('/');
+  const withTest = uriSections
+    .slice(0, uriSections.length - 1)
+    .concat('index.test.js');
 
-  workspace.openTextDocument(testUri);
-
-  const foundFiles = workspace.findFiles(testUri);
-  console.log(foundFiles);
-
-  return foundFiles;
+  return withTest.join('/');
 }
 
-// this method is called when your extension is deactivated
+/**
+ * Clean up function when extension deactivates.
+ */
 function deactivate() {}
 
 module.exports = {
