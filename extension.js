@@ -9,7 +9,7 @@ const {
 } = require('vscode');
 const { ExtensionContext } = require('vscode');
 
-const { Maybe, Just, Nothing } = require('monet');
+const { Maybe, Some, Nothing } = require('monet');
 
 /**
  * @param {ExtensionContext} context
@@ -26,9 +26,10 @@ function activate(context) {
       async provideHover(document, position) {
         const symbols = await getSymbolsMetadata(document, position);
         const testUris = symbols.map((symbol) => getTestUri(symbol.uri.path));
-
-        console.log(testUris);
-        return new Hover('HERE');
+        const testCases = await openDocuments(testUris, getTestCases);
+        const markified = testCases.map((cases) => markify(cases, 0));
+        console.log(markified[0]);
+        return new Hover(new MarkdownString(markified[0]));
       },
     });
   });
@@ -42,10 +43,31 @@ function activate(context) {
  * @param {TextDocument} doc
  * @returns {TestStructure}
  */
-async function getTestCases(doc) {
-  return {
-    moduleName: 1,
-  };
+function getTestCases(doc) {
+  return Some({
+    ['Module Name']: Some({
+      ['test case 1']: Nothing(),
+      ['context']: Some({
+        ['test case 2']: Nothing(),
+      }),
+    }),
+  });
+}
+
+function markify(testCases, indent) {
+  return Object.entries(testCases.orSome({})).reduce((markdown, [testCase, children]) => {
+    return markdown.concat(wrapWithFocus(testCase, indent), '\n', markify(children, indent + 2));
+  }, '');
+}
+
+function wrapWithFocus(string, indent) {
+  if (indent === 0) {
+    return `* ## ${string} ##`;
+  } else if (indent === 2) {
+    return `    * ### ${string} ###`;
+  } else {
+    return `             * ${string}`;
+  }
 }
 
 /**
@@ -57,8 +79,8 @@ async function getTestCases(doc) {
  * @returns {[T]}
  */
 async function openDocuments(filePaths, docMapper) {
-  const promises = uris.map(async (filePath) => {
-    const doc = await workspace.openTextDocument(filePath);
+  const promises = filePaths.map(async (path) => {
+    const doc = await workspace.openTextDocument(path);
     return docMapper(doc);
   });
 
@@ -88,9 +110,7 @@ async function getSymbolsMetadata(document, position) {
  */
 function getTestUri(uri) {
   const uriSections = uri.split('/');
-  const withTest = uriSections
-    .slice(0, uriSections.length - 1)
-    .concat('index.test.js');
+  const withTest = uriSections.slice(0, uriSections.length - 1).concat('index.test.js');
 
   return withTest.join('/');
 }
