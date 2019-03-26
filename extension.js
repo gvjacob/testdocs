@@ -55,19 +55,30 @@ function getTestCases(doc) {
 }
 
 function markify(testCases, indent) {
-  return Object.entries(testCases.orSome({})).reduce((markdown, [testCase, children]) => {
-    return markdown.concat(wrapWithFocus(testCase, indent), '\n', markify(children, indent + 2));
-  }, '');
+  return Object.entries(testCases.orSome({})).reduce(
+    (markdown, [testCase, children]) => {
+      return markdown.concat(
+        markifyLine(testCase, indent),
+        '\n',
+        markify(children, indent + 2),
+      );
+    },
+    '',
+  );
 }
 
-function wrapWithFocus(string, indent) {
+/**
+ * Convert line to markdown given its indent specs.
+ * @param {String} string
+ * @param {Int} indent
+ * @returns {String}
+ */
+function markifyLine(string, indent) {
   if (indent === 0) {
-    return `* ## ${string} ##`;
-  } else if (indent === 2) {
-    return `    * ### ${string} ###`;
-  } else {
-    return `             * ${string}`;
+    return `#### ${string} ####`;
   }
+
+  return `${' '.repeat(indent)}- ${string}`;
 }
 
 /**
@@ -110,7 +121,9 @@ async function getSymbolsMetadata(document, position) {
  */
 function getTestUri(uri) {
   const uriSections = uri.split('/');
-  const withTest = uriSections.slice(0, uriSections.length - 1).concat('index.test.js');
+  const withTest = uriSections
+    .slice(0, uriSections.length - 1)
+    .concat('index.test.js');
 
   return withTest.join('/');
 }
