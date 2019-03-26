@@ -36,6 +36,7 @@
     "@types/mocha": "^2.2.42"
   },
   "dependencies": {
+    "lodash": "^4.17.11",
     "monet": "^0.9.0"
   }
 }

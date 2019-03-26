@@ -11,6 +11,8 @@ const { ExtensionContext } = require('vscode');
 
 const { Maybe, Some, Nothing } = require('monet');
 
+const { isEmpty } = require('lodash');
+
 /**
  * @param {ExtensionContext} context
  */
@@ -28,7 +30,6 @@ function activate(context) {
         const testUris = symbols.map((symbol) => getTestUri(symbol.uri.path));
         const testCases = await openDocuments(testUris, getTestCases);
         const markified = testCases.map((cases) => markify(cases, 0));
-        console.log(markified[0]);
         return new Hover(new MarkdownString(markified[0]));
       },
     });
@@ -38,33 +39,66 @@ function activate(context) {
 }
 
 /**
+ * Get all the symbols if the given document.
+ * @param {TextDocument} document
+ * @returns {[DocumentSymbol]}
+ */
+async function getSymbols(document) {
+  const symbols = await commands.executeCommand(
+    'vscode.executeDocumentSymbolProvider',
+    document.uri,
+  );
+
+  return symbols || [];
+}
+
+function grabDescription(string) {
+  const pattern = /[\"\'](.*)[\"\']/;
+  const found = string.match(pattern);
+  return found ? found[1] || 'Undefined Test Case' : '';
+}
+
+/**
+ * Creates a tree representation of symbols.
+ * @param {[DocumentSymbol]} symbols
+ * @returns {TestStructure}
+ */
+function treeify(symbols) {
+  const tree = {};
+
+  symbols.forEach(({ name, children }) => {
+    const description = grabDescription(name);
+    if (!description) {
+      return;
+    }
+    tree[description] = treeify(children);
+  });
+
+  return isEmpty(tree) ? Nothing() : Some(tree);
+}
+
+/**
  * Get the test descriptions and cases from
  * given text document.
  * @param {TextDocument} doc
  * @returns {TestStructure}
  */
-function getTestCases(doc) {
-  return Some({
-    ['Module Name']: Some({
-      ['test case 1']: Nothing(),
-      ['context']: Some({
-        ['test case 2']: Nothing(),
-      }),
-    }),
-  });
+async function getTestCases(doc) {
+  const symbols = await getSymbols(doc);
+  return treeify(symbols);
 }
 
+/**
+ * Convert given test structure to markdown.
+ *
+ * @param {TestStructure} testCases
+ * @param {Int} indent
+ * @returns {String}
+ */
 function markify(testCases, indent) {
-  return Object.entries(testCases.orSome({})).reduce(
-    (markdown, [testCase, children]) => {
-      return markdown.concat(
-        markifyLine(testCase, indent),
-        '\n',
-        markify(children, indent + 2),
-      );
-    },
-    '',
-  );
+  return Object.entries(testCases.orSome({})).reduce((markdown, [testCase, children]) => {
+    return markdown.concat(markifyLine(testCase, indent), '\n', markify(children, indent + 1));
+  }, '');
 }
 
 /**
@@ -75,10 +109,10 @@ function markify(testCases, indent) {
  */
 function markifyLine(string, indent) {
   if (indent === 0) {
-    return `#### ${string} ####`;
+    return `**${string}**\n`;
   }
 
-  return `${' '.repeat(indent)}- ${string}`;
+  return `${' '.repeat(indent * 2)}- ${string}`;
 }
 
 /**
@@ -92,7 +126,7 @@ function markifyLine(string, indent) {
 async function openDocuments(filePaths, docMapper) {
   const promises = filePaths.map(async (path) => {
     const doc = await workspace.openTextDocument(path);
-    return docMapper(doc);
+    return await docMapper(doc);
   });
 
   return await Promise.all(promises);
@@ -121,9 +155,7 @@ async function getSymbolsMetadata(document, position) {
  */
 function getTestUri(uri) {
   const uriSections = uri.split('/');
-  const withTest = uriSections
-    .slice(0, uriSections.length - 1)
-    .concat('index.test.js');
+  const withTest = uriSections.slice(0, uriSections.length - 1).concat('test.js');
 
   return withTest.join('/');
 }
