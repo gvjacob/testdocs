@@ -1,27 +1,13 @@
-const {
-  commands,
-  languages,
-  workspace,
-  extensions,
-  window,
-  Hover,
-  MarkdownString,
-} = require('vscode');
-const { ExtensionContext } = require('vscode');
+const { commands, languages, workspace, Hover, MarkdownString } = require('vscode');
 
 const { Maybe, Some, Nothing } = require('monet');
-
 const { isEmpty } = require('lodash');
 
 /**
+ * Activates the testdocs extension.
  * @param {ExtensionContext} context
  */
 function activate(context) {
-  console.log('activated');
-
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with  registerCommand
-  // The commandId parameter must match the command field in package.json
   let disposable = commands.registerCommand('extension.testdocs', function() {
     // Register the hover provider
     languages.registerHoverProvider('javascript', {
