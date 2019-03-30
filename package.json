@@ -15,6 +15,31 @@
   ],
   "main": "./extension.js",
   "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "TestDocs Configuration",
+      "properties": {
+        "testdocs.testFileName": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "default": [
+            "__name__.test.js",
+            "test.js"
+          ],
+          "markdownDescription": "",
+          "description": "TestDocs scans these files from the directory of the symbol for the test cases. If one of the files is found, the rest will be ignored."
+        },
+        "testdocs.ignoredBlocks": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "default": []
+        }
+      }
+    },
     "commands": [
       {
         "command": "extension.testdocs",
