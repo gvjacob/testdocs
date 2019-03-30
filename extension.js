@@ -1,7 +1,17 @@
-const { commands, languages, workspace, Hover, MarkdownString } = require('vscode');
+const {
+  commands,
+  languages,
+  workspace,
+  Hover,
+  MarkdownString,
+} = require('vscode');
 
 const { Maybe, Some, Nothing } = require('monet');
 const { isEmpty } = require('lodash');
+
+const { getSettings } = require('./utils');
+
+let settings;
 
 /**
  * Activates the testdocs extension.
@@ -12,11 +22,19 @@ function activate(context) {
     // Register the hover provider
     languages.registerHoverProvider('javascript', {
       async provideHover(document, position) {
-        const symbols = await getSymbolsMetadata(document, position);
-        const testUris = symbols.map((symbol) => getTestUri(symbol.uri.path));
-        const testCases = await openDocuments(testUris, getTestCases);
-        const markified = testCases.map((cases) => markify(cases, 0));
-        return new Hover(new MarkdownString(markified[0]));
+        settings = getSettings();
+
+        try {
+          const symbols = await getSymbolsMetadata(document, position);
+          const testUris = await Promise.all(
+            symbols.map((symbol) => getTestUri(symbol.uri.path)),
+          );
+          const testCases = await openDocuments(testUris, getTestCases);
+          const markified = testCases.map((cases) => markify(cases, 0));
+          return new Hover(new MarkdownString(markified[0]));
+        } catch (error) {
+          console.log('ERROR', error);
+        }
       },
     });
   });
@@ -25,7 +43,7 @@ function activate(context) {
 }
 
 /**
- * Get all the symbols if the given document.
+ * Get all the symbols of the given document.
  * @param {TextDocument} document
  * @returns {[DocumentSymbol]}
  */
@@ -38,10 +56,15 @@ async function getSymbols(document) {
   return symbols || [];
 }
 
+/**
+ * Grab the description of given test block.
+ * @param {String} string
+ * @returns {Maybe} description of test block
+ */
 function grabDescription(string) {
   const pattern = /[\"\'](.*)[\"\']/;
   const found = string.match(pattern);
-  return found ? found[1] || 'Undefined Test Case' : '';
+  return found ? Some(found[1] || 'Undefined test case') : Nothing();
 }
 
 /**
@@ -54,10 +77,10 @@ function treeify(symbols) {
 
   symbols.forEach(({ name, children }) => {
     const description = grabDescription(name);
-    if (!description) {
+    if (description.isNothing()) {
       return;
     }
-    tree[description] = treeify(children);
+    tree[description.some()] = treeify(children);
   });
 
   return isEmpty(tree) ? Nothing() : Some(tree);
@@ -82,9 +105,16 @@ async function getTestCases(doc) {
  * @returns {String}
  */
 function markify(testCases, indent) {
-  return Object.entries(testCases.orSome({})).reduce((markdown, [testCase, children]) => {
-    return markdown.concat(markifyLine(testCase, indent), '\n', markify(children, indent + 1));
-  }, '');
+  return Object.entries(testCases.orSome({})).reduce(
+    (markdown, [testCase, children]) => {
+      return markdown.concat(
+        markifyLine(testCase, indent),
+        '\n',
+        markify(children, indent + 1),
+      );
+    },
+    '',
+  );
 }
 
 /**
@@ -139,11 +169,49 @@ async function getSymbolsMetadata(document, position) {
  * @param {String} uri uri of hovered symbol
  * @returns {String} uri of test file
  */
-function getTestUri(uri) {
+async function getTestUri(uri) {
   const uriSections = uri.split('/');
-  const withTest = uriSections.slice(0, uriSections.length - 1).concat('test.js');
+  const fileName = extractFileName(uriSections[uriSections.length - 1]);
 
-  return withTest.join('/');
+  const testUris = settings.testFileNames.map((file) => {
+    return uriSections
+      .slice(0, uriSections.length - 1)
+      .concat(file)
+      .join('/')
+      .replace('__name__', fileName);
+  });
+
+  const foundFile = await getFoundFile(testUris);
+  console.log('FOUND', foundFile);
+
+  return foundFile;
+}
+
+/**
+ *
+ * @param {Array<String>} filePaths
+ */
+async function getFoundFile(filePaths) {
+  for (const path of filePaths) {
+    try {
+      console.log('BEFORE', path);
+      const doc = await workspace.openTextDocument(path);
+      console.log('Path', path);
+      return path;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  return '';
+}
+
+/**
+ *
+ * @param {String} fileName
+ */
+function extractFileName(fileName) {
+  return fileName.substring(0, fileName.lastIndexOf('.'));
 }
 
 /**
