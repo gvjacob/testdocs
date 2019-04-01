@@ -194,9 +194,7 @@ async function getTestUri(uri) {
 async function getFoundFile(filePaths) {
   for (const path of filePaths) {
     try {
-      console.log('BEFORE', path);
       const doc = await workspace.openTextDocument(path);
-      console.log('Path', path);
       return path;
     } catch (error) {
       console.log(error);
