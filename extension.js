@@ -103,7 +103,7 @@ async function openDocuments(paths, docMapper) {
 /**
  * Find the test URI of given file.
  * @param {String} uri
- * @returns {String}
+ * @returns {Maybe}
  */
 async function findTestUriOf(uri) {
   const testUris = createTestUris(uri);
