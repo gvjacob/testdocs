@@ -10,7 +10,7 @@ function markify(testCases, tier = 0) {
 
   return entries.reduce((markdown, [testCase, children]) => {
     return markdown.concat(
-      markifyLine(testCase, indent),
+      markifyLine(testCase, tier),
       '\n',
       markify(children, tier + 1),
     );

@@ -9,31 +9,41 @@ const {
 const { Maybe, Some, Nothing } = require('monet');
 const { isEmpty } = require('lodash');
 
-const { getSettings } = require('./utils');
+const {
+  getSettings,
+  withoutExtension,
+  pullDescriptionFrom,
+  tryReturn,
+} = require('./utils');
+
+const { markify } = require('./markdown');
 
 let settings;
 
+Object.prototype.add = (key, value) => {
+  const copy = Object.assign({}, this);
+  copy[key] = value;
+  return copy;
+};
+
 /**
- * Activates the testdocs extension.
+ * Activates the testdoc extension.
  * @param {ExtensionContext} context
  */
 function activate(context) {
   let disposable = commands.registerCommand('extension.testdocs', function() {
-    // Register the hover provider
     languages.registerHoverProvider('javascript', {
-      async provideHover(document, position) {
+      provideHover: async (document, position) => {
         settings = getSettings();
 
         try {
           const symbols = await getSymbolsMetadata(document, position);
-          const testUris = await Promise.all(
-            symbols.map((symbol) => getTestUri(symbol.uri.path)),
-          );
+          const testUris = await getValidTestUris(symbols);
           const testCases = await openDocuments(testUris, getTestCases);
-          const markified = testCases.map((cases) => markify(cases, 0));
+          const markified = testCases.map(markify);
           return new Hover(new MarkdownString(markified[0]));
         } catch (error) {
-          console.log('ERROR', error);
+          console.log(error);
         }
       },
     });
@@ -43,47 +53,16 @@ function activate(context) {
 }
 
 /**
- * Get all the symbols of the given document.
- * @param {TextDocument} document
- * @returns {[DocumentSymbol]}
+ * Get test URIs of given symbols if they exist.
+ * @param {[DocumentSymbol]} symbols
+ * @returns {[String]}
  */
-async function getSymbols(document) {
-  const symbols = await commands.executeCommand(
-    'vscode.executeDocumentSymbolProvider',
-    document.uri,
+async function getValidTestUris(symbols) {
+  const maybeTestUris = await Promise.all(
+    symbols.map(({ uri }) => findTestUriOf(uri.path)),
   );
 
-  return symbols || [];
-}
-
-/**
- * Grab the description of given test block.
- * @param {String} string
- * @returns {Maybe} description of test block
- */
-function grabDescription(string) {
-  const pattern = /[\"\'](.*)[\"\']/;
-  const found = string.match(pattern);
-  return found ? Some(found[1] || 'Undefined test case') : Nothing();
-}
-
-/**
- * Creates a tree representation of symbols.
- * @param {[DocumentSymbol]} symbols
- * @returns {TestStructure}
- */
-function treeify(symbols) {
-  const tree = {};
-
-  symbols.forEach(({ name, children }) => {
-    const description = grabDescription(name);
-    if (description.isNothing()) {
-      return;
-    }
-    tree[description.some()] = treeify(children);
-  });
-
-  return isEmpty(tree) ? Nothing() : Some(tree);
+  return maybeTestUris.filter((uri) => uri.isSome()).map((uri) => uri.some());
 }
 
 /**
@@ -98,54 +77,86 @@ async function getTestCases(doc) {
 }
 
 /**
- * Convert given test structure to markdown.
- *
- * @param {TestStructure} testCases
- * @param {Int} indent
- * @returns {String}
+ * Creates a tree representation of symbols.
+ * @param {[DocumentSymbol]} symbols
+ * @returns {TestStructure}
  */
-function markify(testCases, indent) {
-  return Object.entries(testCases.orSome({})).reduce(
-    (markdown, [testCase, children]) => {
-      return markdown.concat(
-        markifyLine(testCase, indent),
-        '\n',
-        markify(children, indent + 1),
-      );
-    },
-    '',
-  );
+function treeify(symbols) {
+  // const treeified = symbols.reduce((tree, { name, children }) => {
+  //   const description = pullDescriptionFrom(name);
+  //   return description.isNothing()
+  //     ? tree
+  //     : tree.add(description.some(), treeify(children));
+  // }, {});
+
+  // return isEmpty(treeified) ? Nothing() : Some(treeified);
+  const tree = {};
+
+  symbols.forEach(({ name, children }) => {
+    const description = pullDescriptionFrom(name);
+    if (description.isNothing()) {
+      return;
+    }
+    tree[description.some()] = treeify(children);
+  });
+
+  return isEmpty(tree) ? Nothing() : Some(tree);
 }
 
 /**
- * Convert line to markdown given its indent specs.
- * @param {String} string
- * @param {Int} indent
- * @returns {String}
- */
-function markifyLine(string, indent) {
-  if (indent === 0) {
-    return `**${string}**\n`;
-  }
-
-  return `${' '.repeat(indent * 2)}- ${string}`;
-}
-
-/**
- * Open all the given documents and return the result
- * of mapping on them with the mapper
+ * Open given documents and map over them.
  *
- * @param {[String]} filePaths
+ * @param {[String]} paths
  * @param {(TextDocument) -> T} docMapper
  * @returns {[T]}
  */
-async function openDocuments(filePaths, docMapper) {
-  const promises = filePaths.map(async (path) => {
+async function openDocuments(paths, docMapper) {
+  const promises = paths.map(async (path) => {
     const doc = await workspace.openTextDocument(path);
     return await docMapper(doc);
   });
 
   return await Promise.all(promises);
+}
+
+/**
+ * Find the test URI of given file.
+ * @param {String} uri
+ * @returns {String}
+ */
+async function findTestUriOf(uri) {
+  const testUris = createTestUris(uri);
+  return await findOneFrom(testUris);
+}
+
+/**
+ * Create list of possible test URIs based on user settings.
+ * @param {String} uri
+ * @returns {[String]}
+ */
+function createTestUris(uri) {
+  const sections = uri.split('/');
+  const nameWithoutExtension = withoutExtension(sections.pop());
+
+  const testUris = settings.testFileNames.map((file) =>
+    sections.concat(file.replace('__name__', nameWithoutExtension)).join('/'),
+  );
+
+  return testUris;
+}
+
+/**
+ * Get all the symbols in text document.
+ * @param {TextDocument} document
+ * @returns {[DocumentSymbol]}
+ */
+async function getSymbols(document) {
+  const symbols = await commands.executeCommand(
+    'vscode.executeDocumentSymbolProvider',
+    document.uri,
+  );
+
+  return symbols || [];
 }
 
 /**
@@ -165,56 +176,31 @@ async function getSymbolsMetadata(document, position) {
 }
 
 /**
- * Get the test file Uri given hovered symbol.
- * @param {String} uri uri of hovered symbol
- * @returns {String} uri of test file
+ * Find the first file that exists.
+ * @param {[String]} filePaths
+ * @returns {String}
  */
-async function getTestUri(uri) {
-  const uriSections = uri.split('/');
-  const fileName = extractFileName(uriSections[uriSections.length - 1]);
-
-  const testUris = settings.testFileNames.map((file) => {
-    return uriSections
-      .slice(0, uriSections.length - 1)
-      .concat(file)
-      .join('/')
-      .replace('__name__', fileName);
-  });
-
-  const foundFile = await getFoundFile(testUris);
-  console.log('FOUND', foundFile);
-
-  return foundFile;
-}
-
-/**
- *
- * @param {Array<String>} filePaths
- */
-async function getFoundFile(filePaths) {
+async function findOneFrom(filePaths) {
   for (const path of filePaths) {
-    try {
-      const doc = await workspace.openTextDocument(path);
-      return path;
-    } catch (error) {
-      console.log(error);
-    }
+    if (exists(path)) return Some(path);
   }
 
-  return '';
+  return Nothing();
 }
 
 /**
- *
- * @param {String} fileName
+ * Does given file exist?
+ * @param {String} filePath
+ * @returns {Boolean}
  */
-function extractFileName(fileName) {
-  return fileName.substring(0, fileName.lastIndexOf('.'));
+async function exists(filePath) {
+  return tryReturn(
+    async () => await workspace.openTextDocument(filePath),
+    false,
+    true,
+  );
 }
 
-/**
- * Clean up function when extension deactivates.
- */
 function deactivate() {}
 
 module.exports = {

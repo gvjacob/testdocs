@@ -33,8 +33,14 @@ Object.prototype.add = (key, value) => {
 function activate(context) {
   let disposable = commands.registerCommand('extension.testdocs', function() {
     languages.registerHoverProvider('javascript', {
-      provideHover: function(document, position) {
+      provideHover: async (document, position) => {
         settings = getSettings();
+
+        const symbols = await getSymbolsMetadata(document, position);
+        const testUris = await Promise.all(symbols.map(findTestUriOf));
+        const testCases = await openDocuments(testUris, getTestCases);
+        const markified = testCases.map(markify);
+        return new Hover(new MarkdownString(markified[0]));
       },
     });
   });
