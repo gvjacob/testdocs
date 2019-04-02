@@ -1,5 +1,6 @@
 const { workspace } = require('vscode');
 const { Maybe, Some, Nothing } = require('monet');
+const { isEmpty } = require('lodash');
 
 /**
  * Get testdocs settings.
@@ -38,15 +39,34 @@ const withoutExtension = (fileName) => {
  */
 const tryReturn = async (func, error, success) => {
   try {
-    return success || (await func());
+    const result = await func();
+    return success || result;
   } catch (err) {
     return error;
   }
 };
+
+/**
+ * Add given key value pair to object.
+ * @param {Object} obj
+ * @param {String} key
+ * @param {Any} value
+ * @returns {Object}
+ */
+const add = (obj, key, value) => ({ ...obj, [key]: value });
+
+/**
+ * Maybe from empty value.
+ * @param {Any} value
+ * @returns {Maybe}
+ */
+const fromEmpty = (value) => (isEmpty(value) ? Nothing() : Some(value));
 
 module.exports = {
   getSettings,
   pullDescriptionFrom,
   withoutExtension,
   tryReturn,
+  add,
+  fromEmpty,
 };

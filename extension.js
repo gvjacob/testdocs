@@ -6,25 +6,20 @@ const {
   MarkdownString,
 } = require('vscode');
 
-const { Maybe, Some, Nothing } = require('monet');
-const { isEmpty } = require('lodash');
+const { Some, Nothing } = require('monet');
 
 const {
   getSettings,
   withoutExtension,
   pullDescriptionFrom,
   tryReturn,
+  add,
+  fromEmpty,
 } = require('./utils');
 
 const { markify } = require('./markdown');
 
 let settings;
-
-Object.prototype.add = (key, value) => {
-  const copy = Object.assign({}, this);
-  copy[key] = value;
-  return copy;
-};
 
 /**
  * Activates the testdoc extension.
@@ -36,15 +31,12 @@ function activate(context) {
       provideHover: async (document, position) => {
         settings = getSettings();
 
-        try {
-          const symbols = await getSymbolsMetadata(document, position);
-          const testUris = await getValidTestUris(symbols);
-          const testCases = await openDocuments(testUris, getTestCases);
-          const markified = testCases.map(markify);
-          return new Hover(new MarkdownString(markified[0]));
-        } catch (error) {
-          console.log(error);
-        }
+        const symbols = await getSymbolsMetadata(document, position);
+        const testUris = await getValidTestUris(symbols);
+        const testCases = await openDocuments(testUris, getTestCases);
+        const markified = testCases.map(markify);
+
+        return new Hover(new MarkdownString(markified[0]));
       },
     });
   });
@@ -82,25 +74,14 @@ async function getTestCases(doc) {
  * @returns {TestStructure}
  */
 function treeify(symbols) {
-  // const treeified = symbols.reduce((tree, { name, children }) => {
-  //   const description = pullDescriptionFrom(name);
-  //   return description.isNothing()
-  //     ? tree
-  //     : tree.add(description.some(), treeify(children));
-  // }, {});
-
-  // return isEmpty(treeified) ? Nothing() : Some(treeified);
-  const tree = {};
-
-  symbols.forEach(({ name, children }) => {
-    const description = pullDescriptionFrom(name);
-    if (description.isNothing()) {
-      return;
-    }
-    tree[description.some()] = treeify(children);
-  });
-
-  return isEmpty(tree) ? Nothing() : Some(tree);
+  return fromEmpty(
+    symbols.reduce((tree, { name, children }) => {
+      const description = pullDescriptionFrom(name);
+      return description.isNothing()
+        ? tree
+        : add(tree, description.some(), treeify(children));
+    }, {}),
+  );
 }
 
 /**
@@ -182,7 +163,7 @@ async function getSymbolsMetadata(document, position) {
  */
 async function findOneFrom(filePaths) {
   for (const path of filePaths) {
-    if (exists(path)) return Some(path);
+    if (await exists(path)) return Some(path);
   }
 
   return Nothing();
@@ -194,7 +175,7 @@ async function findOneFrom(filePaths) {
  * @returns {Boolean}
  */
 async function exists(filePath) {
-  return tryReturn(
+  return await tryReturn(
     async () => await workspace.openTextDocument(filePath),
     false,
     true,
