@@ -31,12 +31,15 @@ function activate(context) {
       provideHover: async (document, position) => {
         settings = getSettings();
 
-        const symbols = await getSymbolsMetadata(document, position);
-        const testUris = await getValidTestUris(symbols);
-        const testCases = await openDocuments(testUris, getTestCases);
-        const markified = testCases.map(markify);
-
-        return new Hover(new MarkdownString(markified[0]));
+        try {
+          const symbols = await getSymbolsMetadata(document, position);
+          const testUris = await getValidTestUris(symbols);
+          const testCases = await openDocuments(testUris, getTestCases);
+          const markified = testCases.map(markify);
+          return new Hover(new MarkdownString(markified[0]));
+        } catch (error) {
+          console.log(error);
+        }
       },
     });
   });
@@ -77,10 +80,22 @@ function treeify(symbols) {
   return fromEmpty(
     symbols.reduce((tree, { name, children }) => {
       const description = pullDescriptionFrom(name);
-      return description.isNothing()
-        ? tree
-        : add(tree, description.some(), treeify(children));
+      return isValidTest(name)
+        ? add(tree, description.some(), treeify(children))
+        : tree;
     }, {}),
+  );
+}
+
+/**
+ * Is given block not ignored and has description?
+ * @param {*} block
+ */
+function isValidTest(block) {
+  const ignoredBlocks = settings.ignoredBlocks;
+  return (
+    pullDescriptionFrom(block).isSome() &&
+    !ignoredBlocks.some((ignored) => block.includes(ignored))
   );
 }
 
