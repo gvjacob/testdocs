@@ -93,10 +93,9 @@ function treeify(symbols) {
  */
 function isValidTest(block) {
   const ignoredBlocks = settings.ignoredBlocks;
-  return (
-    pullDescriptionFrom(block).isSome() &&
-    !ignoredBlocks.some((ignored) => block.includes(ignored))
-  );
+  const isIgnored = ignoredBlocks.some((ignored) => block.includes(ignored));
+
+  return pullDescriptionFrom(block).isSome() && !isIgnored;
 }
 
 /**
