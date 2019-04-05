@@ -79,17 +79,34 @@ async function getTestCases(doc) {
 function treeify(symbols) {
   return fromEmpty(
     symbols.reduce((tree, { name, children }) => {
-      const description = pullDescriptionFrom(name);
-      return isValidTest(name)
-        ? add(tree, description.some(), treeify(children))
-        : tree;
+      return isValidTest(name) ? addChildNode(tree, name, children) : tree;
     }, {}),
   );
 }
 
 /**
+ * Add a child node to given tree and flatten
+ * if required.
+ *
+ * @param {TestStructure} tree
+ * @param {String} block
+ * @param {[DocumentSymbol]} children
+ * @returns {TestStructure}
+ */
+function addChildNode(tree, block, children) {
+  const flattenBlocks = settings.flattenBlocks;
+  const isFlattened = flattenBlocks.some((flatten) => block.includes(flatten));
+  const treeChildren = treeify(children);
+
+  return isFlattened
+    ? { ...tree, ...treeChildren.orSome({}) }
+    : add(tree, pullDescriptionFrom(block).some(), treeChildren);
+}
+
+/**
  * Is given block not ignored and has description?
- * @param {*} block
+ * @param {String} block
+ * @returns {Boolean}
  */
 function isValidTest(block) {
   const ignoredBlocks = settings.ignoredBlocks;
