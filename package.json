@@ -34,6 +34,11 @@
           "type": "array",
           "default": [],
           "markdownDescription": "Test blocks (e.g. _describe_, _it_, etc.) to ignore."
+        },
+        "testdocs.flattenBlocks": {
+          "type": "array",
+          "default": [],
+          "markdownDescription": "Test blocks (e.g. _describe_, _context_, etc.) to flatten."
         }
       }
     },
