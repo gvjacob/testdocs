@@ -52,3 +52,64 @@ suite('withoutExtension', () => {
     assert.equal(withoutExtension(fileName), fileNameWithoutExtension);
   });
 });
+
+suite('tryReturn', () => {
+  const value = 'value';
+  const passingFunc = () => value;
+  const failingFunc = () => {
+    throw new Error('failed');
+  };
+
+  suite('successful', () => {
+    test('returns result of function if success is not given', async () => {
+      assert.equal(await tryReturn(passingFunc, false), value);
+    });
+
+    test('returns given success value', async () => {
+      assert.equal(await tryReturn(passingFunc, false, true), true);
+    });
+  });
+
+  suite('failed', () => {
+    test('returns failure case', async () => {
+      assert.equal(await tryReturn(failingFunc, false), false);
+    });
+
+    test('returns failure case regardless of success case', async () => {
+      assert.equal(await tryReturn(failingFunc, false, true), false);
+    });
+  });
+});
+
+suite('add', () => {
+  const value = 'value';
+  const value2 = 'value2';
+  const obj = { key: value };
+  const obj2 = { key2: value2 };
+
+  test('add to given object', () => {
+    assert.deepEqual(add(obj, 'key2', value2), { ...obj, ...obj2 });
+  });
+
+  test('add to empty object', () => {
+    assert.deepEqual(add({}, 'key2', value2), obj2);
+  });
+});
+
+suite('fromEmpty', () => {
+  suite('empty value', () => {
+    test('returns Nothing if empty', () => {
+      assert.ok(fromEmpty({}).isNothing());
+      assert.ok(fromEmpty([]).isNothing());
+      assert.ok(fromEmpty('').isNothing());
+    });
+  });
+
+  suite('non empty value', () => {
+    test('returns Just of value if not empty', () => {
+      assert.ok(fromEmpty({ key: 1 }).isSome());
+      assert.ok(fromEmpty([1]).isSome());
+      assert.ok(fromEmpty('not empty').isSome());
+    });
+  });
+});
