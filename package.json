@@ -18,6 +18,7 @@
     "onCommand:extension.testdocs"
   ],
   "main": "./extension.js",
+  "icon": "./assets/icon.png",
   "contributes": {
     "configuration": {
       "type": "object",
