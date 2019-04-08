@@ -1,8 +1,6 @@
-# JS TestDocs
+# TestDocs
 
-## Features
-
-Tests as documentation! Hovering over a Javascript symbol gives you a top down overview of its tests. File name convention and considered test blocks can be configured.
+Tests as documentation! This is a VSCode extension that gives you a convenient lens to the tests of your Javascript symbols. Hovering over a symbol gives you a top down overview of its tests. File name convention and considered test blocks can be configured.
 
 <img src="./assets/example.png" styles="width: 100%">
 
