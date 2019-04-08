@@ -3,7 +3,7 @@
   "displayName": "testdocs",
   "description": "",
   "publisher": "Gino",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.32.0"
   },
@@ -18,7 +18,7 @@
     "onCommand:extension.testdocs"
   ],
   "main": "./extension.js",
-  "icon": "./assets/icon.png",
+  "icon": "assets/icon.png",
   "contributes": {
     "configuration": {
       "type": "object",
