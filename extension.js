@@ -20,6 +20,7 @@ const {
 const { markify } = require('./markdown');
 
 let settings;
+let symbolName;
 
 /**
  * Activates the testdoc extension.
@@ -30,6 +31,7 @@ function activate(context) {
     languages.registerHoverProvider('javascript', {
       provideHover: async (document, position) => {
         settings = getSettings();
+        symbolName = getSymbolName(document, position);
 
         try {
           const symbols = await getSymbolsMetadata(document, position);
@@ -45,6 +47,19 @@ function activate(context) {
   });
 
   context.subscriptions.push(disposable);
+}
+
+/**
+ * Get symbol's name.
+ *
+ * @param {TextDocument} document
+ * @param {Position} position
+ * @returns {String}
+ */
+function getSymbolName(document, position) {
+  const range = document.getWordRangeAtPosition(position);
+
+  return document.getText(range);
 }
 
 /**
@@ -156,8 +171,12 @@ function createTestUris(uri) {
       ? file.replace('__root__', rootDirectory)
       : sections.concat(file).join('/');
 
-    return uri.replace('__name__', nameWithoutExtension);
+    return uri
+      .replace('__filename__', nameWithoutExtension)
+      .replace('__symbol__', symbolName);
   });
+
+  console.log(testUris);
 
   return testUris;
 }

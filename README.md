@@ -8,8 +8,11 @@ Tests as documentation! This is a VSCode extension that gives you a convenient l
 
 This extension contributes the following settings:
 
-- `testdocs.testFileNames`: prioritized list of files to scan for tests
-- `testdocs.ignoredBlocks`: ignored test blocks
-- `testdocs.flattenBlocks`: flattened test blocks
+* `testdocs.testFileNames`: prioritized list of files to scan for tests
+* `testdocs.ignoredBlocks`: ignored test blocks
+* `testdocs.flattenBlocks`: flattened test blocks
 
-> Definition: **test block** includes _describe_, _suite_, _context_, etc.
+
+> **Definition**: A **test block** includes _describe_, _suite_, _context_, etc.
+<br>
+> **Conventions**: Use _\_\_filename\_\__ to denote file name of hovered symbol, _\_\_symbol\_\__, for name of symbol, or _\_\_root\_\__ for path to project's root directory when specifying _testFileNames_.
