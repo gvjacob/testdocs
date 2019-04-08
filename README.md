@@ -4,7 +4,7 @@
 
 Tests as documentation! Hovering over a Javascript symbol gives you a top down overview of its tests. File name convention and considered test blocks can be configured.
 
-![testdocs demo](./assets/example.gif)
+<img src="./assets/example.gif" styles="width: 100%">
 
 ## Requirements
 
