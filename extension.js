@@ -149,10 +149,15 @@ async function findTestUriOf(uri) {
 function createTestUris(uri) {
   const sections = uri.split('/');
   const nameWithoutExtension = withoutExtension(sections.pop());
+  const rootDirectory = workspace.workspaceFolders[0].uri.path;
 
-  const testUris = settings.testFileNames.map((file) =>
-    sections.concat(file.replace('__name__', nameWithoutExtension)).join('/'),
-  );
+  const testUris = settings.testFileNames.map((file) => {
+    const uri = file.includes('__root__')
+      ? file.replace('__root__', rootDirectory)
+      : sections.concat(file).join('/');
+
+    return uri.replace('__name__', nameWithoutExtension);
+  });
 
   return testUris;
 }
