@@ -1,6 +1,6 @@
 
 <div style="text-align: center">
-<img src="https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/icon.png" style="width: 30%">
+<img src="https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/icon.png" width="30%">
 </div>
 
 # testdocs for VS Code 
