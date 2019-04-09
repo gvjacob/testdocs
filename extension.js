@@ -21,6 +21,7 @@ const { markify } = require('./markdown');
 
 let settings;
 let symbolName;
+let activated;
 
 /**
  * Activates the testdoc extension.
@@ -28,20 +29,21 @@ let symbolName;
  */
 function activate(context) {
   let disposable = commands.registerCommand('extension.testdocs', function() {
+    // Toggle extension
+    activated = !activated;
+
     languages.registerHoverProvider('javascript', {
       provideHover: async (document, position) => {
+        if (!activated) return;
+
         settings = getSettings();
         symbolName = getSymbolName(document, position);
 
-        try {
-          const symbols = await getSymbolsMetadata(document, position);
-          const testUris = await getValidTestUris(symbols);
-          const testCases = await openDocuments(testUris, getTestCases);
-          const markified = testCases.map(markify);
-          return new Hover(new MarkdownString(markified[0]));
-        } catch (error) {
-          console.log(error);
-        }
+        const symbols = await getSymbolsMetadata(document, position);
+        const testUris = await getValidTestUris(symbols);
+        const testCases = await openDocuments(testUris, getTestCases);
+        const markified = testCases.map(markify);
+        return new Hover(new MarkdownString(markified[0]));
       },
     });
   });
@@ -175,8 +177,6 @@ function createTestUris(uri) {
       .replace('__filename__', nameWithoutExtension)
       .replace('__symbol__', symbolName);
   });
-
-  console.log(testUris);
 
   return testUris;
 }

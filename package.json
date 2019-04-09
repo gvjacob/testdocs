@@ -1,9 +1,9 @@
 {
   "name": "testdocs",
   "displayName": "testdocs",
-  "description": "",
-  "publisher": "Gino",
-  "version": "0.0.2",
+  "description": "Tests as documentation! testdocs is a lens to your Javascript's tests.",
+  "publisher": "gvjacob",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.32.0"
   },
@@ -12,6 +12,7 @@
     "url": "https://github.com/gvjacob/testdocs"
   },
   "categories": [
+    "Languages",
     "Other"
   ],
   "activationEvents": [
@@ -51,7 +52,7 @@
     "commands": [
       {
         "command": "extension.testdocs",
-        "title": "Enable testdocs"
+        "title": "Toggle testdocs"
       }
     ]
   },
