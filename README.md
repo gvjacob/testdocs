@@ -1,11 +1,13 @@
 
-<img src="https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/icon.png" styles="margin: auto; width: 30%">
+<div style="text-align: center">
+<img src="https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/icon.png" style="width: 30%">
+</div>
 
 # testdocs for VS Code 
 
 Tests as documentation! This is a VSCode extension that gives you a convenient lens to the tests of your Javascript symbols. Hovering over a symbol gives you a top down overview of its tests. File name convention and considered test blocks can be configured through the extension's settings.
 
-<img src="https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/example.png" styles="width: 100%">
+<img src="https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/example.png" style="width: 100%">
 
 ## Extension Settings
 
