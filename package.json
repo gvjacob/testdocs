@@ -3,7 +3,7 @@
   "displayName": "testdocs",
   "description": "Tests as documentation! testdocs is a lens to your Javascript's tests.",
   "publisher": "gvjacob",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.32.0"
   },
@@ -19,7 +19,7 @@
     "onCommand:extension.testdocs"
   ],
   "main": "./extension.js",
-  "icon": "assets/icon.png",
+  "icon": "https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/icon.png",
   "contributes": {
     "configuration": {
       "type": "object",
