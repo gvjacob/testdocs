@@ -3,7 +3,7 @@
   "displayName": "testdocs",
   "description": "Tests as documentation! testdocs is a lens to your Javascript's tests.",
   "publisher": "gvjacob",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "engines": {
     "vscode": "^1.32.0"
   },
@@ -19,7 +19,7 @@
     "onCommand:extension.testdocs"
   ],
   "main": "./extension.js",
-  "icon": "https://raw.githubusercontent.com/gvjacob/testdocs/master/assets/icon.png",
+  "icon": "assets/icon.png",
   "contributes": {
     "configuration": {
       "type": "object",
@@ -61,7 +61,8 @@
   ],
   "scripts": {
     "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "node ./node_modules/vscode/bin/test"
+    "test": "node ./node_modules/vscode/bin/test",
+    "publish": "vsce publish $1"
   },
   "devDependencies": {
     "typescript": "^3.3.1",
