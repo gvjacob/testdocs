@@ -9,11 +9,7 @@ function markify(testCases, tier = 0) {
   const entries = Object.entries(testCases.orSome({}));
 
   return entries.reduce((markdown, [testCase, children]) => {
-    return markdown.concat(
-      markifyLine(testCase, tier),
-      '\n',
-      markify(children, tier + 1),
-    );
+    return markdown.concat(markifyLine(testCase, tier), '\n', markify(children, tier + 1));
   }, '');
 }
 
